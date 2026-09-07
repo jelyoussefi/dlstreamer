@@ -172,7 +172,8 @@ void gst_gva_classify_class_init(GstGvaClassifyClass *gvaclassify_class) {
     g_object_class_install_property(
         gobject_class, PROP_ZEROSHOT_TOPK,
         g_param_spec_uint("zeroshot-topk", "Zero-shot top-k",
-                          "Maximum number of ranked classes to attach for zero-shot classification.", MIN_ZEROSHOT_TOPK, MAX_ZEROSHOT_TOPK, DEFAULT_ZEROSHOT_TOPK,
+                          "Maximum number of ranked classes to attach for zero-shot classification.", MIN_ZEROSHOT_TOPK,
+                          MAX_ZEROSHOT_TOPK, DEFAULT_ZEROSHOT_TOPK,
                           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 }
 
