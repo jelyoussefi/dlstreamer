@@ -14,8 +14,8 @@
 
 #include <gst/gst.h>
 
-#include <map>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_set>

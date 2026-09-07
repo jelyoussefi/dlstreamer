@@ -11,8 +11,8 @@
 
 #include "inference_backend/image_inference.h"
 
-#include <map>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <vector>
 
