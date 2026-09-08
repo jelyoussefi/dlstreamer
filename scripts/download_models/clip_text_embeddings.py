@@ -20,7 +20,7 @@ aligned to the label order. File metadata carries:
   labelled ``unknown``.
 
 Use the same CLIP model here and for the image encoder exported with
-``download_hf_models.py --model <clip_id> --extra_args --zeroshot`` so the image and
+``download_hf_models.py --model <clip_id> --export-variant clip-zeroshot`` so the image and
 text embeddings share one space.
 """
 
@@ -96,7 +96,8 @@ def main() -> int:
 
     text_inputs = processor.tokenizer(prompts, padding=True, return_tensors="pt")
     with torch.no_grad():
-        text_features = model.get_text_features(**text_inputs)
+        text_outputs = model.get_text_features(**text_inputs)
+        text_features = text_outputs.pooler_output
         text_features = torch.nn.functional.normalize(text_features, dim=-1)
 
     embeddings = text_features.contiguous().to(torch.float32)

@@ -240,6 +240,7 @@ def custom_conversion(
     outdir: Path,
     token: str | None,
     extra_args: list[str] | None = None,
+    export_variant: str | None = None,
 ) -> Path:
     """Run custom conversion for architectures listed in CUSTOM_CONVERTERS.
 
@@ -249,6 +250,7 @@ def custom_conversion(
         outdir: Output directory for conversion
         token: HuggingFace token
         extra_args: Additional arguments for export
+        export_variant: Specialized model export variant
     """
     if extra_args is None:
         extra_args = []
@@ -256,8 +258,12 @@ def custom_conversion(
     architectures = load_hf_architectures_from_repo_local(local_model_dir)
     primary_arch = architectures[0].lower()
 
+    if export_variant is not None and (primary_arch, export_variant) != ("clipmodel", "clip-zeroshot"):
+        raise ValueError(
+            f"Export variant '{export_variant}' is not supported for architecture '{architectures[0]}'"
+        )
+
     export_dir = outdir / repo_id.replace("/", "_")
-    zeroshot_requested = "--zeroshot" in extra_args or "zeroshot" in extra_args
     handlers: dict[str, tuple[str, Callable[[], Path]]] = {
         "clipmodel": (
             "a CLIP model",
@@ -267,7 +273,7 @@ def custom_conversion(
                     export_dir,
                     token,
                 )
-                if zeroshot_requested
+                if export_variant == "clip-zeroshot"
                 else export_hf_clip_to_openvino(
                     local_model_dir,
                     export_dir,
@@ -407,7 +413,8 @@ def export_hf_clip_zeroshot_to_openvino(
             self.model = model
 
         def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
-            return self.model.get_image_features(pixel_values=pixel_values)
+            image_outputs = self.model.get_image_features(pixel_values=pixel_values)
+            return image_outputs.pooler_output
 
     embedder = _CLIPImageEmbedder(clip_model)
     embedder.eval()

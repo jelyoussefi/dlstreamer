@@ -33,18 +33,26 @@ cd scripts/download_models
 CLIP=openai/clip-vit-base-patch32
 
 # 1) CLIP image encoder -> OpenVINO IR (projected image embedding, with model_info preprocessing)
-python3 download_hf_models.py --model "$CLIP" --extra_args --zeroshot --outdir .
+python3 download_hf_models.py --model "$CLIP" --export-variant clip-zeroshot --outdir .
 
 # 2) Text-label embeddings -> labels.safetensors (carries the CLIP logit_scale)
 python3 clip_text_embeddings.py --model "$CLIP" \
         --labels <path-to>/labels.txt --output labels.safetensors
 ```
 
+The downloader writes the model XML to
+`openai_clip-vit-base-patch32/FP16/openai_clip-vit-base-patch32.xml` under `--outdir`.
+
 Optionally add `--unknown-threshold 0.2` to `clip_text_embeddings.py` to label weak
 matches as `unknown` (the threshold is a top-1 cosine similarity; tune per model and label set).
 
-Copy `clip-vit-base-patch32/` and `labels.safetensors` next to this sample, or point the
-`MODEL` and `EMBEDDINGS` environment variables at them.
+Copy `openai_clip-vit-base-patch32/` and `labels.safetensors` next to this sample, or set `MODEL`
+to the exported `.xml` file and `EMBEDDINGS` to the generated `.safetensors` file:
+
+```bash
+export MODEL=/path/to/openai_clip-vit-base-patch32/FP16/openai_clip-vit-base-patch32.xml
+export EMBEDDINGS=/path/to/labels.safetensors
+```
 
 ## Run
 

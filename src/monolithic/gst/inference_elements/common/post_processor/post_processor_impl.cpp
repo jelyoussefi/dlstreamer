@@ -73,7 +73,8 @@ void validateZeroShotConfiguration(const std::vector<GstStructure *> &model_proc
             (other_converters.empty() ? std::string() : " (resolved converter: " + other_converters + ")") +
             ". Zero-shot classification compares the model's projected image embedding against projected text "
             "embeddings; an unprojected clip_token model lives in a different vector space. Re-export the image "
-            "encoder for zero-shot: python3 download_hf_models.py --model <clip-model> --extra_args --zeroshot");
+            "encoder for zero-shot: python3 download_hf_models.py --model <clip-model> "
+            "--export-variant clip-zeroshot");
     }
 }
 } // namespace

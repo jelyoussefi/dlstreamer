@@ -112,7 +112,7 @@ Each emitted classification carries the usual `label`, `label_id`, `confidence`,
 ## Tooling and sample
 
 Model preparation reuses the Hugging Face scripts in `scripts/download_models`:
-`download_hf_models.py --model <clip_id> --extra_args --zeroshot` exports the CLIP image encoder
+`download_hf_models.py --model <clip_id> --export-variant clip-zeroshot` exports the CLIP image encoder
 (the projected image embedding) to OpenVINO IR with `model_type=clip_zeroshot` and the preprocessing
 written into `model_info`, and
 `clip_text_embeddings.py` turns `labels.txt` into `labels.safetensors` with the `logit_scale`
