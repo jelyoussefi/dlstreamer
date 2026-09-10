@@ -1,23 +1,30 @@
-# Zero-Shot Image Classification (CLIP)
+# Zero-Shot Classification (CLIP)
 
-This sample runs open-vocabulary (zero-shot) image classification with `gvaclassify`.
+This sample runs open-vocabulary (zero-shot) classification with `gvaclassify`.
 Instead of a model with a fixed, trained classification head, `gvaclassify` runs a CLIP
 image encoder and a post-processing converter (`clip_zeroshot`) scores the resulting
 image embedding by cosine similarity against text-label embeddings supplied at runtime.
+
+For images, CLIP classifies the full frame. For video, `gvadetect` first detects faces
+with [arnabdhar/YOLOv8-Face-Detection](https://huggingface.co/arnabdhar/YOLOv8-Face-Detection),
+and CLIP then classifies every detected face ROI.
 
 The class list lives outside the model: to change the classes you edit `labels.txt` and
 regenerate the embeddings file, with no retraining and no change to the model.
 
 ## How it works
 
-1. `gvaclassify` runs the CLIP image encoder. Its OpenVINO IR carries `model_type=clip_zeroshot`
+1. For image input, `gvaclassify` uses `inference-region=full-frame`. For video input,
+   `gvadetect` runs YOLOv8-Face-Detection on each frame and `gvaclassify` uses
+   `inference-region=roi-list` to run CLIP on each detected face.
+2. `gvaclassify` runs the CLIP image encoder. Its OpenVINO IR carries `model_type=clip_zeroshot`
    and the CLIP preprocessing (mean/std, RGB, center crop) in the `model_info` section of
    `model.xml`, so no DL Streamer model-proc file is used.
-2. `model_type=clip_zeroshot` selects the `clip_zeroshot` converter. It L2-normalizes the image
+3. `model_type=clip_zeroshot` selects the `clip_zeroshot` converter. It L2-normalizes the image
    embedding, computes cosine similarity against the label embeddings from `labels.safetensors`,
    applies the CLIP `logit_scale` and a softmax, then reports top-k. The embeddings file is parsed
    once in the post-processor setup, so the converter itself does no file I/O.
-3. `zeroshot-embeddings-file` **supplies** the class bank; it does not select the converter.
+4. `zeroshot-embeddings-file` **supplies** the class bank; it does not select the converter.
    Supplying it with a non-zero-shot model (or omitting it for a `clip_zeroshot` model) is an
    error, so a `clip_token` model exported for image-to-image use can never be silently compared
    against text embeddings.
@@ -43,6 +50,14 @@ python3 clip_text_embeddings.py --model "$CLIP" \
 The downloader writes the model XML to
 `openai_clip-vit-base-patch32/FP16/openai_clip-vit-base-patch32.xml` under `--outdir`.
 
+Video input additionally requires the YOLOv8 face detector. Export it to the default model path:
+
+```bash
+export MODELS_PATH="$HOME/models"
+python3 download_ultralytics_models.py --model arnabdhar/YOLOv8-Face-Detection \
+   --outdir "${MODELS_PATH}/public/arnabdhar_YOLOv8-Face-Detection/FP16" --half
+```
+
 Optionally add `--unknown-threshold 0.2` to `clip_text_embeddings.py` to label weak
 matches as `unknown` (the threshold is a top-1 cosine similarity; tune per model and label set).
 
@@ -54,17 +69,25 @@ export MODEL=/path/to/openai_clip-vit-base-patch32/FP16/openai_clip-vit-base-pat
 export EMBEDDINGS=/path/to/labels.safetensors
 ```
 
+For video, the detector defaults to
+`${MODELS_PATH}/public/arnabdhar_YOLOv8-Face-Detection/FP16/arnabdhar_YOLOv8-Face-Detection.xml`.
+Set `DETECTION_MODEL` to use another face detector XML location. The detector is not required
+for image input.
+
 ## Run
 
 ```bash
 ./zero_shot_classification.sh [INPUT] [DEVICE]
 ```
 
-- `INPUT`: an image/video file or a capture URI (defaults to `images/zebra.jpg` if present).
-- `DEVICE`: `CPU` (default), `GPU`, `NPU`, or e.g. `MULTI:GPU,CPU`.
+- `INPUT`: an image or video path or URI. It defaults to
+   [People Giving a Thumbs Up](https://www.pexels.com/video/people-giving-a-thumbs-up-7504884/),
+   a video by Moe Magners via Pexels.
+- `DEVICE`: device used for both YOLOv8-Face-Detection and CLIP: `CPU` (default), `GPU`, `NPU`, or
+   e.g. `MULTI:GPU,CPU`.
 
-For an image input the script prints JSON classification results; for video it renders an
-annotated window.
+For image input, the script prints full-frame classification results as JSON. For video,
+it renders an annotated window with face detections and per-face CLIP classifications.
 
 ## Change the classes
 
