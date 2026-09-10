@@ -180,13 +180,19 @@ similarity against precomputed **text-label embeddings**. The label set is suppl
 
 ### Pipeline
 
-```text
-image -> gvaclassify(model = CLIP image-encoder IR) -> image embedding [1, D]
-                                                                                       |
-                                                             clip_zeroshot converter (host/CPU):
-                                                             cosine(image, class_k) for each class
-                                                             softmax(logit_scale * cosine)
-                                                             top-k -> {label, label_id, confidence, rank}
+```mermaid
+flowchart LR
+   image["Image or ROI"]
+   encoder["CLIP image encoder<br/>Inference device"]
+   image_embedding["Image embedding<br/>1 x D"]
+   text_embeddings["Text-label embeddings<br/>Classes x D"]
+   converter["clip_zeroshot converter<br/>Host CPU"]
+   scoring["Cosine similarity<br/>Logit scaling and softmax"]
+   output["Top-k classification metadata<br/>Label, confidence and rank"]
+
+   image --> encoder --> image_embedding --> converter
+   text_embeddings --> converter
+   converter --> scoring --> output
 ```
 
 Only the CLIP vision tower runs on the inference device. The similarity, temperature scaling and
@@ -206,9 +212,7 @@ There is a single way to run zero-shot classification, and it has two halves:
 gvaclassify model=<clip-image-encoder>.xml zeroshot-embeddings-file=labels.safetensors
 ```
 
-Selection is therefore driven by the **model**, not by a runtime property and not by naming the
-converter in a model-proc file. No model-proc file is involved in zero-shot mode. There are two CLIP
-converters and they must not be confused:
+There are two CLIP converters and they must not be confused:
 
 | `model_type` | Converter | Model output | Used for |
 |---|---|---|---|
@@ -220,9 +224,7 @@ converter. Both mismatches are rejected at pipeline construction with an explici
 
 - `model_type=clip_zeroshot` with no `zeroshot-embeddings-file`: there is nothing to classify against.
 - `zeroshot-embeddings-file` set on a model that is not `clip_zeroshot`: an unprojected `clip_token`
-   embedding lives in a different vector space, so cosine similarities against text embeddings would
-   be meaningless. Previously this either produced a bare dimension mismatch or, when the dimensions
-   happened to agree, silently wrong results.
+   embedding lives in a different vector space, so cosine similarities against text embeddings would be meaningless.
 
 Zero-shot properties:
 
@@ -241,25 +243,15 @@ to the configured labels. Optional file metadata includes:
 - `unknown_threshold`: top-1 cosine similarity below which a result is labelled `unknown`.
 - `model`, `labels`, `prompt`: informational values.
 
-The file is read natively (no Python or PyTorch dependency at runtime) by a small,
-dependency-light parser (`safetensors_reader.h`) using the in-tree `nlohmann_json` for the header.
+The file is read natively (no Python or PyTorch dependency at runtime).
 Choosing `.safetensors` over a pickled `.pth` avoids arbitrary code execution when loading a file
 that, per the threat model, is treated as untrusted.
-
-Files become data in the post-processor setup layer, not in the converter, following the same
-convention as `loadLabelsFromFile`. `loadEmbeddingsFromFile()` in `post_processor.cpp` parses the
-matrix, L2-normalizes the class rows and resolves `logit_scale` and `unknown_threshold`, producing a
-ready-to-use `ZeroShotEmbeddings` that travels through the converter `Initializer`. The
-`clip_zeroshot` converter is therefore pure computation: normalize the incoming per-frame image
-embedding, calculate cosine similarity, apply `logit_scale`, run softmax and top-k, then perform the
-unknown check. It carries no file, format or metadata-key knowledge.
 
 ### Preprocessing
 
 CLIP requires specific normalization. The exported IR carries this in the `model_info` section of
 `model.xml` (`mean_values` and `scale_values` are the CLIP mean/std multiplied by 255,
-`color_space=RGB`, `resize_type=crop`). DL Streamer reads it and composes the input affine transform.
-No DL Streamer model-proc file is required. The IR input keeps a fixed spatial shape
+`color_space=RGB`, `resize_type=crop`). DL Streamer reads it and composes the input affine transform. The IR input keeps a fixed spatial shape
 `[N, 3, 224, 224]`.
 
 ### Calibration and the unknown class
