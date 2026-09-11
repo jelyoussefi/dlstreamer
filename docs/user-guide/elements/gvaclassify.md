@@ -170,7 +170,7 @@ share-va-display-ctx: Whether to share VA Display context across inference eleme
                         Boolean. Default: true
 ```
 
-## Zero-shot classification with CLIP
+## Special case: zero-shot classification with CLIP
 
 `gvaclassify` supports open-vocabulary (zero-shot) image classification. Rather than a model with a
 fixed classification head, it runs a CLIP **image** encoder (vision tower + visual projection) and a

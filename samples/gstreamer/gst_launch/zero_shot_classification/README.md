@@ -77,17 +77,21 @@ for image input.
 ## Run
 
 ```bash
-./zero_shot_classification.sh [INPUT] [DEVICE]
+./zero_shot_classification.sh [INPUT] [DEVICE] [OUTPUT]
 ```
 
 - `INPUT`: an image or video path or URI. It defaults to
    [People Giving a Thumbs Up](https://www.pexels.com/video/people-giving-a-thumbs-up-7504884/),
    a video by Moe Magners via Pexels.
-- `DEVICE`: device used for both YOLOv8-Face-Detection and CLIP: `CPU` (default), `GPU`, `NPU`, or
+- `DEVICE`: device used for both YOLOv8-Face-Detection and CLIP: `CPU`, `GPU` (default), `NPU`, or
    e.g. `MULTI:GPU,CPU`.
+- `OUTPUT`: video output mode: `display` (default), `file`, `fps`, `json`, or `display-and-json`.
+   The `file` mode writes an annotated H.264 video to `output.mp4` in the current directory; `fps`
+   runs headlessly with `gvafpscounter` and `fakesink`; JSON modes write detections and
+   classifications to `output.json` in the current directory.
 
-For image input, the script prints full-frame classification results as JSON. For video,
-it renders an annotated window with face detections and per-face CLIP classifications.
+For image input, the script always prints full-frame classification results as JSON. For video,
+the selected output includes face detections and per-face CLIP classifications where applicable.
 
 ## Change the classes
 
